@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import Customer from "../models/Customer.js";
 import generateToken from "../utils/generateToken.js";
 
@@ -8,7 +9,10 @@ export const registerCustomer = async (req, res) => {
     const customerExists = await Customer.findOne({ email });
     if (customerExists) return res.status(400).json({ message: "Customer already exists" });
 
-    const customer = await Customer.create({ name, email, password, address });
+    // 🔒 Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const customer = await Customer.create({ name, email, password: hashedPassword, address });
     res.status(201).json({
       _id: customer._id,
       name: customer.name,
@@ -26,7 +30,8 @@ export const loginCustomer = async (req, res) => {
     const { email, password } = req.body;
     const customer = await Customer.findOne({ email });
 
-    if (customer && customer.password === password) {
+    // ✅ Compare password with hash
+    if (customer && await bcrypt.compare(password, customer.password)) {
       res.json({
         _id: customer._id,
         name: customer.name,
